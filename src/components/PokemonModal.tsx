@@ -100,11 +100,7 @@ export function PokemonModal({
           <CloseIcon className="h-4 w-4" />
         </button>
 
-        {isLoading && (
-          <div className="p-6">
-            <LoadingSkeleton count={1} variant="modal" />
-          </div>
-        )}
+        {isLoading && <LoadingSkeleton variant="modal" />}
         {isError && (
           <div className="p-6">
             <ErrorState
