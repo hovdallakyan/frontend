@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../lib/api";
+import { beginOptimistic, rollback } from "../utils/optimistic";
 import type { Favorite } from "../types/pokemon";
 
 export const favoritesKey = ["favorites"] as const;
@@ -22,8 +23,10 @@ export function useAddFavorite() {
         body: JSON.stringify({ pokemonId }),
       }),
     onMutate: async (pokemon) => {
-      await queryClient.cancelQueries({ queryKey: favoritesKey });
-      const previous = queryClient.getQueryData<Favorite[]>(favoritesKey);
+      const { previous } = await beginOptimistic<Favorite[]>(
+        queryClient,
+        favoritesKey,
+      );
       const optimistic: Favorite = {
         ...pokemon,
         createdAt: new Date().toISOString(),
@@ -36,9 +39,7 @@ export function useAddFavorite() {
       return { previous };
     },
     onError: (_err, _pokemon, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(favoritesKey, context.previous);
-      }
+      rollback(queryClient, favoritesKey, context?.previous);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: favoritesKey }),
   });
@@ -50,17 +51,17 @@ export function useRemoveFavorite() {
     mutationFn: (pokemonId: number) =>
       apiFetch<void>(`/favorites/${pokemonId}`, { method: "DELETE" }),
     onMutate: async (pokemonId) => {
-      await queryClient.cancelQueries({ queryKey: favoritesKey });
-      const previous = queryClient.getQueryData<Favorite[]>(favoritesKey);
+      const { previous } = await beginOptimistic<Favorite[]>(
+        queryClient,
+        favoritesKey,
+      );
       queryClient.setQueryData<Favorite[]>(favoritesKey, (old = []) =>
         old.filter((f) => f.pokemonId !== pokemonId),
       );
       return { previous };
     },
     onError: (_err, _pokemonId, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(favoritesKey, context.previous);
-      }
+      rollback(queryClient, favoritesKey, context?.previous);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: favoritesKey }),
   });
