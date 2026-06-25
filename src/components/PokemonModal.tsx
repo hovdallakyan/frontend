@@ -1,7 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePokemonDetail } from '../api/pokemon';
 import { useFavoriteToggle } from '../hooks/useFavoriteToggle';
+import { formatAbilityName, formatDexNumber } from '../lib/pokemonFormat';
+import { CloseIcon, ChevronRightIcon, StarIcon } from './icons';
+import { getTypeTint } from '../lib/typeStyles';
 import { TypeBadge } from './TypeBadge';
 import { ErrorState } from './ErrorState';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -20,6 +23,7 @@ export function PokemonModal({
   const { data, isLoading, isError, refetch } = usePokemonDetail(pokemonId);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   const { isFavorite, toggle, isPending } = useFavoriteToggle({
     pokemonId,
@@ -27,12 +31,17 @@ export function PokemonModal({
     sprite: data?.sprite ?? '',
   });
 
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    window.setTimeout(onClose, 200);
+  }, [onClose]);
+
   useEffect(() => {
     closeBtnRef.current?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
         return;
       }
 
@@ -59,12 +68,16 @@ export function PokemonModal({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [handleClose]);
+
+  const typeTint = data ? getTypeTint(data.types) : 'from-slate-100 to-white';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm ${
+        isClosing ? 'animate-fade-in opacity-0 transition-opacity duration-200' : 'animate-fade-in'
+      }`}
+      onClick={handleClose}
       role="presentation"
     >
       <div
@@ -72,112 +85,141 @@ export function PokemonModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pokemon-modal-title"
-        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl animate-slide-up"
+        className={`relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 ${
+          isClosing ? 'animate-slide-down' : 'animate-slide-up'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           ref={closeBtnRef}
           type="button"
           aria-label="Close"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          onClick={handleClose}
+          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-white hover:text-slate-800"
         >
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
 
-        {isLoading && <LoadingSkeleton />}
+        {isLoading && (
+          <div className="p-6">
+            <LoadingSkeleton count={1} variant="modal" />
+          </div>
+        )}
         {isError && (
-          <ErrorState
-            message="Failed to load Pokémon details."
-            onRetry={() => refetch()}
-          />
+          <div className="p-6">
+            <ErrorState
+              message="Failed to load Pokémon details."
+              onRetry={() => refetch()}
+            />
+          </div>
         )}
 
         {data && (
-          <div className="flex flex-col items-center">
-            <img
-              src={data.sprite}
-              alt={data.name}
-              width={120}
-              height={120}
-              className="h-30 w-30 object-contain"
-            />
-
-            <h2
-              id="pokemon-modal-title"
-              className="mt-2 text-2xl font-bold capitalize"
+          <>
+            <div
+              className={`bg-gradient-to-b ${typeTint} px-6 pb-6 pt-8 text-center`}
             >
-              {data.name}
-            </h2>
+              <span className="font-mono text-sm font-bold text-slate-400">
+                {formatDexNumber(data.id)}
+              </span>
 
-            <button
-              type="button"
-              disabled={isPending || !data}
-              onClick={toggle}
-              className="mt-2 rounded-full px-3 py-1 text-lg transition-colors hover:bg-amber-50 disabled:opacity-50"
-              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              {isFavorite ? '★ Favorited' : '☆ Add to favorites'}
-            </button>
+              <div className="mx-auto mt-2 flex h-36 w-36 items-center justify-center rounded-full bg-white/70 shadow-inner ring-1 ring-white/80">
+                <img
+                  src={data.sprite}
+                  alt={data.name}
+                  width={120}
+                  height={120}
+                  className="h-28 w-28 object-contain drop-shadow-md"
+                />
+              </div>
 
-            <section className="mt-6 w-full">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Types
-              </h3>
-              <div className="flex flex-wrap gap-2">
+              <h2
+                id="pokemon-modal-title"
+                className="mt-3 text-3xl font-extrabold capitalize text-slate-900"
+              >
+                {data.name}
+              </h2>
+
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
                 {data.types.map((type) => (
-                  <TypeBadge key={type} type={type} />
+                  <TypeBadge key={type} type={type} size="md" />
                 ))}
               </div>
-            </section>
 
-            <section className="mt-6 w-full">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Abilities
-              </h3>
-              <ul className="list-inside list-disc capitalize text-slate-700">
-                {data.abilities.map((ability) => (
-                  <li key={ability}>{ability.replace('-', ' ')}</li>
-                ))}
-              </ul>
-            </section>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={toggle}
+                className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-all disabled:opacity-50 ${
+                  isFavorite
+                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'
+                    : 'border-2 border-amber-300 bg-white text-amber-700 hover:bg-amber-50'
+                }`}
+                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <StarIcon className="h-4 w-4" filled={isFavorite} />
+                {isFavorite ? 'Favorited' : 'Add to favorites'}
+              </button>
+            </div>
 
-            {data.evolutions.length > 0 && (
-              <section className="mt-6 w-full">
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Evolution Line
+            <div className="max-h-[40vh] overflow-y-auto px-6 pb-6">
+              <section className="mt-2">
+                <h3 className="mb-2 text-xs font-extrabold uppercase tracking-widest text-slate-400">
+                  Abilities
                 </h3>
-                <div className="flex flex-wrap justify-center gap-4">
-                  {data.evolutions.map((evo) => (
-                    <button
-                      key={evo.id}
-                      type="button"
-                      onClick={() => onSelectEvolution(evo.id)}
-                      className={`flex flex-col items-center rounded-lg border p-3 transition-colors hover:bg-slate-50 ${
-                        evo.id === data.id
-                          ? 'border-blue-400 bg-blue-50'
-                          : 'border-slate-200'
-                      }`}
+                <div className="flex flex-wrap gap-2">
+                  {data.abilities.map((ability) => (
+                    <span
+                      key={ability}
+                      className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold capitalize text-slate-700 ring-1 ring-slate-200/80"
                     >
-                      {evo.sprite && (
-                        <img
-                          src={evo.sprite}
-                          alt={evo.name}
-                          loading="lazy"
-                          width={64}
-                          height={64}
-                          className="h-16 w-16 object-contain"
-                        />
-                      )}
-                      <span className="mt-1 text-xs font-medium capitalize">
-                        {evo.name}
-                      </span>
-                    </button>
+                      {formatAbilityName(ability)}
+                    </span>
                   ))}
                 </div>
               </section>
-            )}
-          </div>
+
+              {data.evolutions.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="mb-3 text-xs font-extrabold uppercase tracking-widest text-slate-400">
+                    Evolution Line
+                  </h3>
+                  <div className="flex flex-wrap items-center justify-center gap-1">
+                    {data.evolutions.map((evo, index) => (
+                      <div key={evo.id} className="flex items-center gap-1">
+                        {index > 0 && (
+                          <ChevronRightIcon className="h-4 w-4 shrink-0 text-slate-300" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onSelectEvolution(evo.id)}
+                          className={`flex flex-col items-center rounded-xl border p-2.5 transition-all hover:shadow-md ${
+                            evo.id === data.id
+                              ? 'border-brand bg-brand/5 ring-2 ring-brand/20'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          {evo.sprite && (
+                            <img
+                              src={evo.sprite}
+                              alt={evo.name}
+                              loading="lazy"
+                              width={56}
+                              height={56}
+                              className="h-14 w-14 object-contain"
+                            />
+                          )}
+                          <span className="mt-1 text-xs font-bold capitalize text-slate-700">
+                            {evo.name}
+                          </span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

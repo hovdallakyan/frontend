@@ -1,33 +1,20 @@
-const TYPE_COLORS: Record<string, string> = {
-  normal: 'bg-stone-400',
-  fire: 'bg-orange-500',
-  water: 'bg-blue-500',
-  electric: 'bg-yellow-400 text-yellow-900',
-  grass: 'bg-green-500',
-  ice: 'bg-cyan-300 text-cyan-900',
-  fighting: 'bg-red-700',
-  poison: 'bg-purple-500',
-  ground: 'bg-amber-600',
-  flying: 'bg-indigo-400',
-  psychic: 'bg-pink-500',
-  bug: 'bg-lime-500 text-lime-900',
-  rock: 'bg-yellow-700',
-  ghost: 'bg-violet-600',
-  dragon: 'bg-indigo-700',
-  dark: 'bg-neutral-700',
-  steel: 'bg-slate-400 text-slate-900',
-  fairy: 'bg-pink-300 text-pink-900',
-};
+import { getTypeStyle } from '../lib/typeStyles';
 
 interface TypeBadgeProps {
   type: string;
+  size?: 'sm' | 'md';
 }
 
-export function TypeBadge({ type }: TypeBadgeProps) {
-  const color = TYPE_COLORS[type] ?? 'bg-slate-500';
+export function TypeBadge({ type, size = 'sm' }: TypeBadgeProps) {
+  const color = getTypeStyle(type);
+  const sizeClass =
+    size === 'md'
+      ? 'px-3 py-1 text-xs'
+      : 'px-2.5 py-0.5 text-[11px]';
+
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize text-white ${color}`}
+      className={`inline-block rounded-full font-semibold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20 ${sizeClass} ${color}`}
     >
       {type}
     </span>

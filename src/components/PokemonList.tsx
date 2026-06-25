@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useFavorites } from '../api/favorites';
-import { usePokemonList } from '../api/pokemon';
-import { useDebounce } from '../hooks/useDebounce';
-import { useUiStore } from '../store/useUiStore';
+import { useFilteredPokemon } from '../hooks/useFilteredPokemon';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -15,21 +12,18 @@ interface PokemonListProps {
   onSelect: (id: number) => void;
 }
 
+function LoadingMore() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-8 text-sm font-semibold text-slate-400">
+      <span className="inline-block h-4 w-4 animate-spin-slow rounded-full border-2 border-slate-200 border-t-brand" />
+      Loading more…
+    </div>
+  );
+}
+
 export function PokemonList({ onSelect }: PokemonListProps) {
-  const { data: pokemon = [], isLoading, isError, refetch } = usePokemonList();
-  const { data: favorites = [] } = useFavorites();
-  const search = useUiStore((s) => s.search);
-  const favoritesOnly = useUiStore((s) => s.favoritesOnly);
-  const debouncedSearch = useDebounce(search);
-
-  const favoriteIds = new Set(favorites.map((f) => f.pokemonId));
-  const query = debouncedSearch.trim().toLowerCase();
-
-  const filtered = pokemon.filter((p) => {
-    if (favoritesOnly && !favoriteIds.has(p.id)) return false;
-    if (query && !p.name.toLowerCase().includes(query)) return false;
-    return true;
-  });
+  const { filtered, isLoading, isError, refetch, debouncedSearch, favoritesOnly } =
+    useFilteredPokemon();
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -67,12 +61,20 @@ export function PokemonList({ onSelect }: PokemonListProps) {
   if (filtered.length === 0) {
     return (
       <EmptyState
+        variant={favoritesOnly ? 'favorites' : debouncedSearch ? 'search' : 'default'}
         message={
           favoritesOnly
-            ? 'No favorite Pokémon yet. Star some Pokémon to see them here!'
+            ? 'No favorite Pokémon yet'
             : debouncedSearch
-              ? `No Pokémon matching "${debouncedSearch}".`
-              : 'No Pokémon found.'
+              ? `No Pokémon matching "${debouncedSearch}"`
+              : 'No Pokémon found'
+        }
+        hint={
+          favoritesOnly
+            ? 'Star some Pokémon to build your collection!'
+            : debouncedSearch
+              ? 'Try a different search term.'
+              : undefined
         }
       />
     );
@@ -82,14 +84,19 @@ export function PokemonList({ onSelect }: PokemonListProps) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 animate-fade-in">
-        {visible.map((p) => (
-          <PokemonCard key={p.id} pokemon={p} onClick={() => onSelect(p.id)} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {visible.map((p, index) => (
+          <PokemonCard
+            key={p.id}
+            pokemon={p}
+            onClick={() => onSelect(p.id)}
+            style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+          />
         ))}
       </div>
       {visibleCount < filtered.length && (
-        <div ref={sentinelRef} className="py-8 text-center text-sm text-slate-400">
-          Loading more…
+        <div ref={sentinelRef}>
+          <LoadingMore />
         </div>
       )}
     </>
