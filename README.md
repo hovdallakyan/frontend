@@ -1,32 +1,44 @@
-# React + TypeScript + Vite
+# Pokédex — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript single-page app for browsing the first 150 Pokémon, viewing
+their details, and managing favorites. Talks to the NestJS backend over a small
+REST API.
 
-Currently, two official plugins are available:
+## Approach
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Vite + React 19 + TypeScript** for a fast dev setup.
+- **React Query** owns all server state (Pokémon list, details, favorites) with
+  caching and optimistic favorite toggles that roll back on error.
+- **Zustand** holds light UI state (search text, favorites-only filter).
+- **Tailwind v4** for styling.
+- The Pokémon list and detail data come from the backend proxy, not PokéAPI
+  directly, so the frontend never calls the upstream API.
 
-## React Compiler
+## Run locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Requires Node 20+ and the backend running on `http://localhost:3000`.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+App runs at `http://localhost:5173`. During dev, `/api` is proxied to the backend
+(see `vite.config.ts`), so no extra config is needed. For a deployed build, set
+`VITE_API_URL` to the backend URL.
+
+```bash
+npm run build     # type-check + production build
+npm run preview   # serve the build locally
+npm run lint
+```
+
+## Features & assumptions
+
+- Scrollable grid of 150 Pokémon with sprite, name, and type badges.
+- Click a card to open an accessible modal (Esc / overlay close) showing
+  abilities, types, and evolution options.
+- Favorite toggle on each card, persisted via the backend and highlighted in the
+  list. A favorites-only filter and debounced name search are in the toolbar.
+- Loading skeletons, error states with retry, and empty states are handled.
+- Assumes a single global favorites list (no auth/users), matching the backend.
