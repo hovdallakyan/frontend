@@ -1,42 +1,28 @@
-export type PokemonTypeName =
-  | "normal"
-  | "fire"
-  | "water"
-  | "electric"
-  | "grass"
-  | "ice"
-  | "fighting"
-  | "poison"
-  | "ground"
-  | "flying"
-  | "psychic"
-  | "bug"
-  | "rock"
-  | "ghost"
-  | "dragon"
-  | "dark"
-  | "steel"
-  | "fairy";
-
 export interface PokemonSummary {
   id: number;
   name: string;
-  spriteUrl: string;
-  types: PokemonTypeName[];
+  sprite: string;
+  types: string[];
 }
 
 export interface EvolutionOption {
   id: number;
   name: string;
-  spriteUrl: string;
+  sprite: string;
 }
 
-export interface PokemonDetail extends PokemonSummary {
+export interface PokemonDetail {
+  id: number;
+  name: string;
+  sprite: string;
+  types: string[];
   abilities: string[];
   evolutions: EvolutionOption[];
 }
 
 export interface Favorite {
-  id: number;
+  pokemonId: number;
   name: string;
+  sprite: string;
+  createdAt: string;
 }
